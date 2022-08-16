@@ -22,7 +22,6 @@ using namespace vex;
 #define ScreenW 480
 
 const int scrollSpeed=2;
-const int pickupRange=15;
 const int hitboxSize=5;
 bool gameRunning=0;
 
@@ -37,6 +36,9 @@ class Bird{
   int jumpCD=0;
   public:
   int score=0;
+  void resetY(){
+    y=ScreenH/2;
+  }
   void draw(){
     Brain.Screen.drawRectangle(x,(int)y,w,h);
   }
@@ -61,26 +63,6 @@ class Bird{
   int gety(){return y;}
 }bird;
 
-class Coin{
-  private:
-  int x=ScreenW,y;
-  const int r=10;
-  public:
-  Coin(){
-    y=rand()*1.0/RAND_MAX*100+80;
-  }
-  void draw(){
-    Brain.Screen.drawCircle(x, y, r);
-  }
-  void Update(){
-    x-=scrollSpeed;
-    draw();
-  }
-
-  int getx(){return x;}
-  int gety(){return y;}
-};
-
 class Pillar{
   private:
   int x=ScreenW,y;
@@ -91,8 +73,8 @@ class Pillar{
     y=rand()*1.0/RAND_MAX*100+80;
   }
   void draw(){
-    Brain.Screen.drawRectangle(x, y, width, ScreenH-y);
-    Brain.Screen.drawRectangle(x, 0, width, y-gap);
+    Brain.Screen.drawRectangle(x, y, width, ScreenH-y+20);
+    Brain.Screen.drawRectangle(x, 20, width, y-gap-20);
   }
   void Update(){
     x-=scrollSpeed;
@@ -104,6 +86,11 @@ class Pillar{
 };
 
 std::vector<Pillar*> pillars;
+
+bool isOut(){
+  if(bird.gety()<0||bird.gety()>ScreenH) return 1;
+  return 0;
+}
 
 bool isColliding(Pillar p){ // checks if the bird is colliding with Pillar p
   if(bird.getx()>p.getx()-hitboxSize && bird.getx()<p.getx()+p.width+hitboxSize){
@@ -137,6 +124,7 @@ void Update(){
     }
     pillars[i]->Update();
   }
+  if(isOut()) gameRunning=0;
   bird.Update();
 }
 
@@ -152,8 +140,8 @@ void titleScreen(){
 }
 
 void gameOver(){
-  bird.score=0;
   Brain.Screen.clearScreen();
+  Brain.Screen.printAt(200, 20, "score: %d                    ", bird.score);
   Brain.Screen.setFont(mono30);
   Brain.Screen.printAt(1, ScreenH/2, "GAME OVER. Press A to continue...");
   Brain.Screen.setFont(mono20);
@@ -165,11 +153,22 @@ void gameOver(){
 }
 
 void gameLoop(){
+  bird.score=0;
+  bird.resetY();
+  bool pressingA=0;
   while(gameRunning){
     Update();
-    if(Controller1.ButtonA.pressing()){
-      bird.jump();
+
+    if(!pressingA){
+      if(Controller1.ButtonA.pressing())
+        pressingA=1;
+    }else{
+      if(!Controller1.ButtonA.pressing()){
+        bird.jump();
+        pressingA=0;
+      }
     }
+
     wait(20, msec);
   }
 }
